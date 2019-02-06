@@ -1,6 +1,11 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 
+let id;
+let units;
+let totalPrice;
+let unitPrice;
+
 const connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
@@ -15,84 +20,66 @@ connection.connect(function(err) {
 });
 
 function startShopping() {
-    console.log("Bamazon: All the things you don't need\n Items currently on sale\n");
-    connection.query("SELECT * FROM products",
-    function(err, res) {
+    console.log("Bamazon: All the Things You Don't Need\n");
+    console.log("\nItems currently for sale\n");
+    connection.query("SELECT item_id, product_name, price FROM products WHERE stock_quantity > 0", function(err, res) {
         if (err) throw err;
-        for (i=0; i<res.length; i++) {
-        console.log("\nItem ID: " + res[i].item_id + " | " + " Product Name: " + res[i].product_name + " | " + " Price($: " + res[i].price);
+        for(var i=0; i<res.length; i++) {
+            console.log("ID: " + res[i].item_id + " | Product: " + res[i].product_name + " | Price $" + res[i].price);
+        }
         makePurchase();
-        }       
     });
 }
 
 function makePurchase() {
-    inquirer    
-        .prompt([
-        {    
+    inquirer
+    .prompt([
+        {
             type: 'input',
-            name: 'product_id',
-            message: 'Please enter the item ID of the product you would like to buy: ',
-            validate: function(value) {
-                if (isNaN(value) === false) {
-                    return true;
-                }
-                return false;
-            }
+            name: 'id',
+            message: 'Please enter the ID of the product you would like to purchase:'
         },
         {
             type: 'input',
-            name: 'purchase_amount',
-            message: 'Please enter the quantity you would like to buy: ',
-            validate: function(value) {
-                if (isNaN(value) === false) {
-                    return true;
-                }
-                return false;
-            }
+            name: 'units',
+            message: 'How many would you like to purchase?'
         }
-        ])
-        .then(function(answer) {
+    ]).then(function(answer) {
+        id = parseInt(answer.id);
+        units = parseInt(answer.units);
 
-            const itemID = parseInt(anwer.product_id);
-            const amtBought = parseFloat(answer.purchase_amount);
-
-            console.log("ID: " + itemID + " Amount: " + amtBought);
-            console.log("Checking the inventory....");
-
-            checkInventory(itemID, amtBought);
-    });
+        checkStock(id, units);
+    })
 }
 
-function checkInventory(itemID, amtBought) {
-
-    connection.query("SELECT * FROM products WHERE item_id =" + itemID, function(err, res) {
+function checkStock(id, units) {
+    let checkQuery = 'SELECT * FROM products WHERE ?';
+    connection.query(checkQuery, {item_id : id}, function(err,res) {
         if (err) throw err;
-
-        const quantity = parseInt(res[0].stock_quantity);
-        
-        if(amtBought > quantity) {
-            console.log("Sorry! We don't have enough in stock to fulfill your request. Please make another purchase");
+        // console.log(res);
+        let amtInStock = parseInt(res[0].stock_quantity);
+        if (units > amtInStock) {
+            console.log("Sorry! We don't have enough in stock to fulfill your order");
             startShopping();
         } else {
-            updateDb(itemID, amtBought, quantity);
+            updateDB(id, units, amtInStock);
         }
     });
 }
 
-function updateDb(itemID, amtBought, quantity) {
+function updateDB(id, units, amtInStock) {
+    let unitQuery = "UPDATE products SET stock_quantity = ? WHERE item_id = ?";
+    let priceQuery = "SELECT price FROM products WHERE ?";
+    let stockAmt = amtInStock - units;
 
-    connection.query("UPDATE products SET stock_quantity = " + (quantity - amtBought), function(err, res) {
+    connection.query(unitQuery, [stockAmt, id], function(err,res) {
         if (err) throw err;
-    });
-
-    connection.query("SELECT * FROM products WHERE item_id =" + itemID, function(err, res) {
+    })
+    connection.query(priceQuery, {item_id : id}, function(err,res) {
         if (err) throw err;
-        const price = parseFloat(res[0].price);
-        const totalPrice = price * amtBought;
-        
-        console.log("Thank you for purchasing " + res[0].product_name + "\nYour total purchase amount is: $" + totalPrice);
-    });
-
+        unitPrice = parseFloat(res[0].price);
+        totalPrice = unitPrice * units;
+        console.log("Thank you for your purchase. Your total today is: $" + totalPrice);
+    })
     connection.end();
 }
