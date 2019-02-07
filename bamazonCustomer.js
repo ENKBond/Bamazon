@@ -5,6 +5,8 @@ let id;
 let units;
 let totalPrice;
 let unitPrice;
+let currentSales;
+let newSales;
 
 const connection = mysql.createConnection({
     host: "localhost",
@@ -20,7 +22,7 @@ connection.connect(function(err) {
 });
 
 function startShopping() {
-    console.log("Bamazon: All the Things You Don't Need\n");
+    console.log("\nBamazon: All the Things You Don't Need\n");
     console.log("\nItems currently for sale\n");
     connection.query("SELECT item_id, product_name, price FROM products WHERE stock_quantity > 0", function(err, res) {
         if (err) throw err;
@@ -60,7 +62,7 @@ function checkStock(id, units) {
         let amtInStock = parseInt(res[0].stock_quantity);
         if (units > amtInStock) {
             console.log("Sorry! We don't have enough in stock to fulfill your order");
-            startShopping();
+            connection.end();
         } else {
             updateDB(id, units, amtInStock);
         }
@@ -83,3 +85,4 @@ function updateDB(id, units, amtInStock) {
     })
     connection.end();
 }
+

@@ -38,3 +38,4 @@ VALUES ("Candy Coma Land board game", "Toys", 15.00, 18);
 
 INSERT INTO products (product_name, department_name, price, stock_quantity)
 VALUES ("My First Amoeba doll", "Toys", 10.00, 3);
+

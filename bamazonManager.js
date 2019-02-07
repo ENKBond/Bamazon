@@ -15,6 +15,7 @@ connection.connect(function(err) {
 });
 
 function startMenu() {
+    console.log("\nWelcome to Bamazon Manager\n");
     inquirer
     .prompt({
         type: "list",
